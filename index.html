@@ -1,0 +1,630 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EZ-BookReturn | 二手書收購平台</title>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700&display=swap" rel="stylesheet">
+    
+    <style>
+        :root {
+            --primary-color: #1A365D;    /* 深海藍 */
+            --primary-light: #2B6CB0;    /* 亮藍色 */
+            --accent-color: #DD6B20;     /* 溫暖琥珀橘 */
+            --accent-hover: #C05621;     /* 深橘色 */
+            --bg-color: #F7FAFC;         /* 柔和灰白背景 */
+            --card-bg: #FFFFFF;
+            --text-main: #2D3748;
+            --text-muted: #718096;
+            --border-color: #E2E8F0;
+        }
+
+        body {
+            font-family: 'Noto Sans TC', sans-serif;
+            margin: 0;
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            line-height: 1.6;
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
+        }
+
+        /* 頁首設計 */
+        header {
+            background: linear-gradient(135deg, var(--primary-color) 0%, var(--primary-light) 100%);
+            color: white;
+            text-align: center;
+            padding: 40px 20px 60px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+        
+        header h1 {
+            margin: 0;
+            font-size: 28px;
+            font-weight: 700;
+            letter-spacing: 1px;
+        }
+        
+        header p {
+            margin: 10px 0 0;
+            color: #E2E8F0;
+            font-size: 15px;
+        }
+
+        /* 導覽列標籤設計 */
+        nav {
+            display: flex;
+            justify-content: center;
+            flex-wrap: wrap; /* 允許在手機版換行 */
+            gap: 10px;
+            margin-top: -25px;
+            position: relative;
+            z-index: 10;
+            padding: 0 15px;
+        }
+
+        nav button {
+            background: var(--card-bg);
+            color: var(--text-muted);
+            border: none;
+            padding: 12px 18px;
+            border-radius: 30px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 700;
+            font-family: 'Noto Sans TC', sans-serif;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+            transition: all 0.3s ease;
+        }
+
+        nav button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 12px rgba(0,0,0,0.1);
+            color: var(--primary-color);
+        }
+
+        nav button.active-btn {
+            background: var(--accent-color);
+            color: white;
+        }
+
+        /* 內容容器 */
+        .container {
+            max-width: 550px;
+            width: 90%;
+            margin: 30px auto;
+            padding: 35px;
+            background: var(--card-bg);
+            border-radius: 20px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.08);
+            flex: 1; 
+        }
+
+        /* 頁面切換動畫 */
+        .page { 
+            display: none; 
+            animation: fadeIn 0.4s ease-out;
+        }
+        .active { display: block; }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* 價目表圖片 */
+        .price-img {
+            width: 100%;
+            border-radius: 12px;
+            margin-bottom: 25px;
+            border: 1px solid var(--border-color);
+            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+            object-fit: cover;
+        }
+
+        /* 計算機區塊 */
+        .calc-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 18px 15px;
+            margin-bottom: 12px;
+            background: #F8FAFC;
+            border-radius: 12px;
+            border: 1px solid var(--border-color);
+            transition: 0.2s;
+        }
+        
+        .calc-item:hover {
+            border-color: var(--primary-light);
+            background: #F1F5F9;
+        }
+
+        .calc-label {
+            font-weight: 700;
+            font-size: 16px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .controls {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            background: white;
+            padding: 5px;
+            border-radius: 20px;
+            border: 1px solid var(--border-color);
+        }
+
+        .controls button {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            border: none;
+            background: var(--bg-color);
+            color: var(--text-main);
+            cursor: pointer;
+            font-size: 18px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: 0.2s;
+        }
+
+        .controls button:hover {
+            background: var(--border-color);
+        }
+
+        /* 修復：隱藏數字輸入框的上下箭頭，避免擠壓空間 */
+        input[type=number]::-webkit-inner-spin-button, 
+        input[type=number]::-webkit-outer-spin-button { 
+            -webkit-appearance: none; 
+            margin: 0; 
+        }
+        input[type=number] {
+            -moz-appearance: textfield;
+        }
+
+        /* 修復：計算機數字欄位設定 */
+        .controls input {
+            width: 45px; /* 加寬確保數字完整顯示 */
+            text-align: center;
+            border: none;
+            font-size: 18px;
+            font-weight: bold;
+            color: var(--primary-color);
+            background: transparent;
+            outline: none;
+            padding: 0;
+            opacity: 1; /* 防止 iOS 預設半透明 */
+            -webkit-text-fill-color: var(--primary-color); /* 強制顯示顏色 */
+        }
+
+        /* 總計區塊 */
+        .result-area {
+            margin-top: 30px;
+            text-align: center;
+            padding-top: 20px;
+            border-top: 2px dashed var(--border-color);
+        }
+
+        .total-text {
+            font-size: 20px;
+            color: var(--text-main);
+            margin-bottom: 15px;
+        }
+
+        .total-amount {
+            font-size: 36px;
+            color: var(--accent-color);
+            font-weight: 900;
+        }
+
+        .btn-reset {
+            background-color: transparent;
+            color: var(--text-muted);
+            border: 1px solid var(--border-color);
+            padding: 8px 20px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: 0.2s;
+        }
+        
+        .btn-reset:hover {
+            background-color: #FED7D7;
+            color: #C53030;
+            border-color: #FEB2B2;
+        }
+
+        /* 表單共用設計 */
+        h2 {
+            text-align: center;
+            color: var(--primary-color);
+            margin-top: 0;
+            margin-bottom: 25px;
+        }
+
+        .form-group { margin-bottom: 20px; }
+        
+        label { 
+            display: block; 
+            margin-bottom: 8px; 
+            font-weight: 700; 
+            font-size: 14px;
+            color: var(--text-main);
+        }
+
+        input, select, textarea {
+            width: 100%;
+            padding: 14px;
+            border: 1px solid var(--border-color);
+            border-radius: 10px;
+            box-sizing: border-box;
+            font-size: 15px;
+            font-family: 'Noto Sans TC', sans-serif;
+            transition: 0.3s ease;
+            background-color: #F8FAFC;
+        }
+
+        textarea {
+            resize: vertical;
+        }
+
+        input:focus, select:focus, textarea:focus {
+            outline: none;
+            border-color: var(--primary-light);
+            background-color: white;
+            box-shadow: 0 0 0 3px rgba(43, 108, 176, 0.1);
+        }
+
+        .btn-submit {
+            width: 100%;
+            background: var(--accent-color);
+            color: white;
+            border: none;
+            padding: 16px;
+            border-radius: 10px;
+            font-size: 18px;
+            font-weight: 700;
+            cursor: pointer;
+            margin-top: 15px;
+            transition: 0.3s;
+            box-shadow: 0 4px 6px rgba(221, 107, 32, 0.2);
+        }
+
+        .btn-submit:hover { 
+            background: var(--accent-hover); 
+            transform: translateY(-2px);
+            box-shadow: 0 6px 12px rgba(221, 107, 32, 0.3);
+        }
+
+        .btn-secondary {
+            background: var(--primary-light);
+            box-shadow: 0 4px 6px rgba(43, 108, 176, 0.2);
+        }
+        .btn-secondary:hover {
+            background: var(--primary-color);
+            box-shadow: 0 6px 12px rgba(43, 108, 176, 0.3);
+        }
+
+        /* QA 區塊設計 */
+        .qa-item {
+            margin-bottom: 20px;
+            padding: 15px;
+            background: #F8FAFC;
+            border-left: 4px solid var(--accent-color);
+            border-radius: 0 8px 8px 0;
+        }
+        .qa-item h4 {
+            margin: 0 0 8px 0;
+            color: var(--primary-color);
+            font-size: 16px;
+        }
+        .qa-item p {
+            margin: 0;
+            color: var(--text-muted);
+            font-size: 14px;
+        }
+
+        /* 頁尾 Footer */
+        footer {
+            text-align: center;
+            padding: 20px;
+            color: var(--text-muted);
+            font-size: 13px;
+            margin-top: auto;
+        }
+        footer span {
+            font-weight: bold;
+            color: var(--primary-color);
+        }
+        
+        @media (max-width: 480px) {
+            .container { padding: 25px 20px; margin: 30px auto 50px; }
+            header { padding: 30px 15px 50px; }
+            nav button { padding: 10px 14px; font-size: 13px; }
+        }
+    </style>
+</head>
+<body>
+
+<header>
+    <h1>BookSwap Campus</h1>
+    <p>校園二手書收購・讓知識繼續傳遞</p>
+</header>
+
+<nav>
+    <button type="button" id="btn-p1" class="active-btn" onclick="showPage('p1')">💰 估價計算機</button>
+    <button type="button" id="btn-p2" onclick="showPage('p2')">📅 線上預約</button>
+    <button type="button" id="btn-p3" onclick="showPage('p3')">❓ 常見問題</button>
+    <button type="button" id="btn-p4" onclick="showPage('p4')">✉️ 聯絡我們</button>
+</nav>
+
+<div id="p1" class="container page active">
+    <img src="price_list.jpg" alt="收購價目表" class="price-img" onerror="this.style.display='none'">
+    
+    <div class="calc-item">
+        <span class="calc-label">🟢 全新 ($150)</span>
+        <div class="controls">
+            <button onclick="updateQty('qty-new', -1)">-</button>
+            <input type="number" id="qty-new" value="0" readonly>
+            <button onclick="updateQty('qty-new', 1)">+</button>
+        </div>
+    </div>
+    
+    <div class="calc-item">
+        <span class="calc-label">🟡 良好 ($100)</span>
+        <div class="controls">
+            <button onclick="updateQty('qty-good', -1)">-</button>
+            <input type="number" id="qty-good" value="0" readonly>
+            <button onclick="updateQty('qty-good', 1)">+</button>
+        </div>
+    </div>
+    
+    <div class="calc-item">
+        <span class="calc-label">🔴 差強人意 ($50)</span>
+        <div class="controls">
+            <button onclick="updateQty('qty-poor', -1)">-</button>
+            <input type="number" id="qty-poor" value="0" readonly>
+            <button onclick="updateQty('qty-poor', 1)">+</button>
+        </div>
+    </div>
+
+    <div class="result-area">
+        <div class="total-text">總計金額： <span class="total-amount">$<span id="total">0</span></span></div>
+        <button class="btn-reset" onclick="resetAll()">🔄 重置數量</button>
+    </div>
+</div>
+
+<div id="p2" class="container page">
+    <h2>預約收購時間</h2>
+    
+    <form id="bookForm" onsubmit="submitToGoogleForm(event)">
+        <div class="form-group">
+            <label>科系</label>
+            <input type="text" id="dept" placeholder="例如：資管系" required>
+        </div>
+        <div class="form-group">
+            <label>班級</label>
+            <input type="text" id="classNum" placeholder="例如：四年甲班" required>
+        </div>
+        <div class="form-group">
+            <label>學號</label>
+            <input type="text" id="studentId" placeholder="例如：B12345678" required>
+        </div>
+        <div class="form-group">
+            <label>姓名</label>
+            <input type="text" id="name" placeholder="請輸入真實姓名" required>
+        </div>
+        <div class="form-group">
+            <label>聯絡資訊 (Line/IG/手機)</label>
+            <input type="text" id="contact" placeholder="請留下我們能找到你的方式" required>
+        </div>
+        <div class="form-group">
+            <label>想賣的二手書總數量</label>
+            <input type="number" id="bookCount" min="1" placeholder="例如：5" required>
+        </div>
+        <div class="form-group">
+            <label>選擇面交日期時段</label>
+            <select id="timeslot" required>
+                <option value="" disabled selected>請選擇方便的面交時段</option>
+                <option value="4/29 (三) 17:15 ~ 18:00">4/29 (三) 17:15 ~ 18:00</option>
+                <option value="5/6 (三) 17:15 ~ 18:00">5/6 (三) 17:15 ~ 18:00</option>
+            </select>
+        </div>
+        <button type="submit" class="btn-submit">送出預約</button>
+    </form>
+</div>
+
+<div id="p3" class="container page">
+    <h2>常見問題 Q&A</h2>
+    
+    <div class="qa-item">
+        <h4>Q1: 什麼樣的書不收購？</h4>
+        <p>A: 嚴重缺頁、泡水發霉、超過50%以上大面積塗鴉或解答已全部寫完的書籍，我們將無法收購喔！</p>
+    </div>
+    
+    <div class="qa-item">
+        <h4>Q2: 收購金什麼時候拿？</h4>
+        <p>A: 面交時工作人員確認書況無誤後，會當場給予現金，或者依照您的需求使用轉帳給您。</p>
+    </div>
+
+    <div class="qa-item">
+        <h4>Q3: 只能在學校面交嗎？</h4>
+        <p>A: 是的，為了保護雙方安全與方便，目前僅開放校園內指定的時段與地點進行面交。</p>
+    </div>
+    
+    <div class="qa-item">
+        <h4>Q4: 如果預約了臨時不能來怎麼辦？</h4>
+        <p>A: 請盡早透過「聯絡我們」表單通知我們取消，我們好將名額保留給其他同學。無故未到將會被記錄喔！</p>
+    </div>
+</div>
+
+<div id="p4" class="container page">
+    <h2>聯絡我們 / 提出問題</h2>
+    <p style="text-align:center; color: var(--text-muted); margin-bottom: 25px; font-size: 14px;">
+        如果有修改時間的需求或其他疑問，請填寫下表，我們將透過 Email 回覆您。
+    </p>
+    
+    <form id="contactForm" onsubmit="submitContactForm(event)">
+        <div class="form-group">
+            <label>姓名</label>
+            <input type="text" id="contactName" placeholder="您的姓名" required>
+        </div>
+        <div class="form-group">
+            <label>電子郵件 (Email)</label>
+            <input type="email" id="contactEmail" placeholder="example@email.com" required>
+        </div>
+        <div class="form-group">
+            <label>問題類別</label>
+            <select id="issueType" required>
+                <option value="" disabled selected>請選擇問題類別</option>
+                <option value="修改預約時間">修改預約時間</option>
+                <option value="取消預約">取消預約</option>
+                <option value="書籍收購標準">書籍收購標準</option>
+                <option value="其他問題">其他問題</option>
+            </select>
+        </div>
+        <div class="form-group">
+            <label>問題內容</label>
+            <textarea id="contactMessage" rows="4" placeholder="請描述您的問題，例如：我原本預約 4/29，希望能改成 5/6..." required></textarea>
+        </div>
+        <button type="submit" class="btn-submit btn-secondary">送出問題</button>
+    </form>
+</div>
+
+<footer>
+    <p>網站製作：<span>你的名字 / 團隊名稱</span> | © 2026 BookSwap Campus</p>
+</footer>
+
+<script>
+    // 切換頁面
+    function showPage(id) {
+        document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+        document.getElementById(id).classList.add('active');
+        
+        document.querySelectorAll('nav button').forEach(btn => btn.classList.remove('active-btn'));
+        document.getElementById('btn-' + id).classList.add('active-btn');
+    }
+
+    // 計算機功能
+    function updateQty(id, change) {
+        const input = document.getElementById(id);
+        let val = parseInt(input.value) || 0;
+        val += change;
+        if (val < 0) val = 0;
+        input.value = val;
+        calc();
+    }
+
+    function calc() {
+        const n = (parseInt(document.getElementById('qty-new').value) || 0) * 150;
+        const g = (parseInt(document.getElementById('qty-good').value) || 0) * 100;
+        const p = (parseInt(document.getElementById('qty-poor').value) || 0) * 50;
+        document.getElementById('total').innerText = n + g + p;
+    }
+
+    function resetAll() {
+        document.getElementById('qty-new').value = 0;
+        document.getElementById('qty-good').value = 0;
+        document.getElementById('qty-poor').value = 0;
+        calc();
+    }
+
+    // 頁面2：預約表單送出功能
+    function submitToGoogleForm(event) {
+        event.preventDefault(); 
+
+        const dept = document.getElementById('dept').value.trim();
+        const classNum = document.getElementById('classNum').value.trim();
+        const studentId = document.getElementById('studentId').value.trim();
+        const name = document.getElementById('name').value.trim();
+        const contact = document.getElementById('contact').value.trim();
+        const bookCount = parseInt(document.getElementById('bookCount').value) || 0;
+        const timeslot = document.getElementById('timeslot').value;
+
+        if (studentId.length < 5) {
+            alert("⚠️ 請輸入正確的學號格式！");
+            document.getElementById('studentId').focus();
+            return;
+        }
+
+        if (bookCount <= 0) {
+            alert("⚠️ 想賣的書籍數量必須大於 0 本！");
+            document.getElementById('bookCount').focus();
+            return;
+        }
+
+        if (!timeslot) {
+            alert("⚠️ 請選擇面交日期時段！");
+            document.getElementById('timeslot').focus();
+            return;
+        }
+
+        const formUrl = "https://docs.google.com/forms/d/e/1FAIpQLSc7pU-OoMotd7khEOM8_FL0WbmFVJ7NQkFC836VspiCHz0-Ag/formResponse";
+        const formData = new FormData();
+        formData.append("entry.412323225", dept);       
+        formData.append("entry.930053872", classNum);   
+        formData.append("entry.1415975098", studentId); 
+        formData.append("entry.1722870587", name);      
+        formData.append("entry.192876502", contact);    
+        formData.append("entry.90839217", bookCount);   
+        formData.append("entry.1601779915", timeslot);  
+
+        fetch(formUrl, {
+            method: "POST",
+            mode: "no-cors", 
+            body: formData
+        }).then(() => {
+            alert(`✅ 預約成功！\n\n${name} 同學您好，\n您的預約時段為：${timeslot}\n屆時見！`);
+            document.getElementById('bookForm').reset(); 
+            resetAll(); 
+            showPage('p1'); 
+        }).catch(error => {
+            alert("❌ 送出失敗，請檢查網路連線。");
+            console.error(error);
+        });
+    }
+
+    // 頁面4：「聯絡我們」表單真實送出功能
+    function submitContactForm(event) {
+        event.preventDefault();
+        
+        // 抓取聯絡我們表單的值
+        const name = document.getElementById('contactName').value.trim();
+        const email = document.getElementById('contactEmail').value.trim();
+        const type = document.getElementById('issueType').value;
+        const message = document.getElementById('contactMessage').value.trim();
+        
+        // 替換為你的第二個 Google Form (注意要把 viewform 改成 formResponse)
+        const formUrl = "https://docs.google.com/forms/d/e/1FAIpQLScwrW46HtJvzNQFJleKiX2ASkOE4CCI13FP3d4Vx2ym2vgN1A/formResponse";
+        
+        // 填入剛剛抓出來的 entry ID
+        const formData = new FormData();
+        formData.append("entry.857543226", name);       // 姓名
+        formData.append("entry.2088642091", email);     // 電子郵件
+        formData.append("entry.1387228903", type);      // 問題類別
+        formData.append("entry.1640893825", message);   // 問題內容
+
+        // 送出資料到後台
+        fetch(formUrl, {
+            method: "POST",
+            mode: "no-cors", 
+            body: formData
+        }).then(() => {
+            alert(`✅ 問題已送出！\n\n${name} 您好，\n關於「${type}」的問題我們已經收到，\n稍後會透過 ${email} 回覆您！`);
+            document.getElementById('contactForm').reset();
+            showPage('p1'); // 送出後跳回首頁
+        }).catch(error => {
+            alert("❌ 訊息送出失敗，請檢查網路連線。");
+            console.error(error);
+        });
+    }
+</script>
+
+</body>
+</html>

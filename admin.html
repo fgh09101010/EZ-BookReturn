@@ -79,7 +79,7 @@
 
             <div class="card">
                 <h3>Excel 簽到表下載</h3>
-                <p style="font-size: 14px; color: #666;">選擇時段後，系統將產生包含「簽到欄」的 .xlsx 檔案，中文顯示完全正常。</p>
+                <p style="font-size: 14px; color: #666;">選擇時段後，系統將產生包含「簽到欄」的 .xlsx 檔案。</p>
                 <div class="export-box">
                     <select id="export-slot">
                         <option value="4/29 (三) 17:15 ~ 18:00">4/29 (三) 17:15 ~ 18:00</option>
@@ -94,6 +94,11 @@
         <div class="card">
             <h3>📝 預約清單預覽 (去個資化)</h3>
             <div class="table-responsive" id="data-table-container">讀取中...</div>
+        </div>
+
+        <div class="card" style="margin-top: 20px;">
+            <h3>💬 學生提問與回報</h3>
+            <div class="table-responsive" id="question-table-container">讀取中...</div>
         </div>
     </div>
 </div>
@@ -113,18 +118,44 @@
         currentPW = pw;
         document.getElementById('login-section').style.display = 'none';
         document.getElementById('admin-panel').style.display = 'block';
+        
         loadData();
     }
 
     async function loadData() {
+        // 1. 抓取預約資料 (獨立處理)
         try {
-            const res = await fetch(`${GAS_URL}?action=getStats&pw=${currentPW}`);
-            const data = await res.json();
-            if (data.error) { alert(data.error); location.reload(); return; }
-            cachedData = data;
-            renderTable(data);
-            renderChart(data);
-        } catch (e) { alert("API 連線失敗，請檢查部署權寫。"); }
+            const resStats = await fetch(`${GAS_URL}?action=getStats&pw=${currentPW}`);
+            const dataStats = await resStats.json();
+            
+            if (dataStats.error) {
+                alert("驗證失敗：" + dataStats.error);
+                location.reload();
+                return;
+            }
+
+            cachedData = dataStats;
+            renderTable(dataStats);
+            renderChart(dataStats);
+        } catch (e) {
+            console.error("預約資料加載失敗:", e);
+            document.getElementById('data-table-container').innerHTML = "⚠️ 預約資料加載失敗";
+        }
+
+        // 2. 抓取提問資料 (獨立處理，不影響預約資料)
+        try {
+            const resQuestions = await fetch(`${GAS_URL}?action=getQuestions&pw=${currentPW}`);
+            const dataQuestions = await resQuestions.json();
+            
+            if (!dataQuestions.error) {
+                renderQuestions(dataQuestions);
+            } else {
+                document.getElementById('question-table-container').innerHTML = "暫無提問資料或權限不足";
+            }
+        } catch (e) {
+            console.error("提問資料加載失敗:", e);
+            document.getElementById('question-table-container').innerHTML = "⚠️ 提問資料加載失敗";
+        }
     }
 
     function renderTable(data) {
@@ -136,25 +167,44 @@
         document.getElementById('data-table-container').innerHTML = html;
     }
 
+    function renderQuestions(data) {
+        const container = document.getElementById('question-table-container');
+        if (!container) return;
+
+        let html = `<table><tr><th>姓名</th><th>Email</th><th>類別</th><th>內容</th></tr>`;
+        data.forEach(item => {
+            // 注意：GAS 端回傳的物件屬性需為 col0, col1, col2, col3
+            html += `<tr>
+                <td>${item.col0 || ""}</td>
+                <td>${item.col1 || ""}</td>
+                <td>${item.col2 || ""}</td>
+                <td>${item.col3 || ""}</td>
+            </tr>`;
+        });
+        html += `</table>`;
+        container.innerHTML = html;
+    }
+
     function renderChart(data) {
         const counts = {};
         data.forEach(item => { counts[item.slot] = (counts[item.slot] || 0) + 1; });
         const ctx = document.getElementById('slotChart').getContext('2d');
-        new Chart(ctx, {
+        
+        if (window.myChart) window.myChart.destroy();
+        
+        window.myChart = new Chart(ctx, {
             type: 'bar',
             data: {
                 labels: Object.keys(counts),
                 datasets: [{ label: '人數', data: Object.values(counts), backgroundColor: '#2B6CB0' }]
-            }
+            },
+            options: { responsive: true }
         });
     }
 
-    // 🌟 核心功能：使用 SheetJS 匯出 Excel
     function exportToExcel() {
         const slot = document.getElementById('export-slot').value;
         const status = document.getElementById('export-status');
-        
-        // 篩選資料
         const filtered = cachedData.filter(item => item.slot === slot);
         
         if (filtered.length === 0) {
@@ -164,36 +214,22 @@
 
         status.innerText = "⏳ 正在產生 Excel...";
 
-        // 整理資料格式 (加上標題列與簽到欄)
         const excelData = filtered.map(item => ({
             "姓名": item.name,
             "系級/班級": item.dept,
             "預計數量": item.count + " 本",
             "面交時段": item.slot,
-            "現場簽名": "" // 留空供列印後簽名
+            "現場簽名": "" 
         }));
 
-        // 建立工作表 (Worksheet)
         const ws = XLSX.utils.json_to_sheet(excelData);
+        ws['!cols'] = [{wch: 15}, {wch: 25}, {wch: 10}, {wch: 25}, {wch: 20}];
 
-        // 設定欄位寬度 (稍微加寬讓列印好看)
-        const wscols = [
-            {wch: 15}, // 姓名
-            {wch: 25}, // 系級
-            {wch: 10}, // 數量
-            {wch: 25}, // 時段
-            {wch: 20}  // 簽名
-        ];
-        ws['!cols'] = wscols;
-
-        // 建立活頁簿 (Workbook)
         const wb = XLSX.utils.book_new();
         XLSX.utils.book_append_sheet(wb, ws, "簽到表");
 
-        // 下載檔案
         const fileName = `BookSwap_簽到表_${slot.replace(/\//g, '-')}.xlsx`;
         XLSX.writeFile(wb, fileName);
-
         status.innerText = "✅ Excel 下載成功！";
     }
 </script>
